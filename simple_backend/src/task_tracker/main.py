@@ -1,10 +1,13 @@
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException
 from storage import TaskStorage
+from dotenv import load_dotenv
 
-from models import TaskAdd, Task
+
+from models import TaskAdd
 
 app = FastAPI()
+load_dotenv()
 storage = TaskStorage()
 
 
