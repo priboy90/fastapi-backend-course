@@ -3,6 +3,8 @@ import requests
 from typing import List
 from models import TaskAdd, Task
 from pydantic import parse_obj_as
+from cloudflare_ai import CloudflareAI
+
 
 class TaskStorage:
     def __init__(self):
@@ -14,8 +16,8 @@ class TaskStorage:
             "X-Master-Key": self.api_key,
             "X-Bin-Versioning": "false"
         }
+        self.ai = CloudflareAI()
         self._initialize_bin()
-
 
     def _initialize_bin(self):
         """Создает пустой бин при первом запуске"""
@@ -41,17 +43,26 @@ class TaskStorage:
         )
         response.raise_for_status()
 
-
     def get_all(self) -> List[Task]:
         """Получает все задачи"""
         data = self._fetch_bin() or []
         return parse_obj_as(List[Task], data)
 
     def create(self, task: TaskAdd) -> Task:
-        """Создает новую задачу с автоматическим ID"""
+        """Создает новую задачу с автоматическим ID  и получает решения от AI"""
         tasks = self.get_all()
         task_id = max([t.id for t in tasks], default=0) + 1
-        new_task = Task(id=task_id, name=task.name, status=task.status)
+
+        suggestions = self.ai.get_task_solution_suggestions(task.name)
+
+
+        new_task = Task(
+            id=task_id,
+            name=task.name,
+            status=task.status,
+            answer_ai=suggestions
+        )
+
         tasks.append(new_task)
         self._update_bin([t.dict() for t in tasks])
         return new_task

@@ -3,8 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from storage import TaskStorage
 from dotenv import load_dotenv
 
-
-from models import TaskAdd
+from models import TaskAdd, Task
 
 app = FastAPI()
 load_dotenv()
@@ -16,7 +15,7 @@ def get_tasks():
     return storage.get_all()
 
 
-@app.post("/tasks", response_model=TaskAdd)
+@app.post("/tasks", response_model=Task)
 def create_task(task: Annotated[TaskAdd, Depends()], ):
     return storage.create(task)
 
