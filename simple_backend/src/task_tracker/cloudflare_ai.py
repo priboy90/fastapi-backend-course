@@ -1,7 +1,7 @@
 import os
-import requests
-from typing import Optional
+from typing import Optional, Dict
 from pydantic import BaseModel
+from http_client import BaseHTTPClient
 
 
 class CloudflareAIUsage(BaseModel):
@@ -22,17 +22,21 @@ class CloudflareAIResult(BaseModel):
     messages: list
 
 
-class CloudflareAI:
+class CloudflareAI(BaseHTTPClient):
     def __init__(self):
         self.api_key = os.getenv("CLOUDFLARE_API_KEY")
         self.account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID")
         self.model = os.getenv("CLOUDFLARE_MODEL", "@cf/meta/llama-2-7b-chat-int8")
-        self.base_url = f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model}"
+        super().__init__()
 
-        self.headers = {
+    def _get_request_headers(self) -> Dict[str, str]:
+        return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+
+    def _get_base_url(self) -> str:
+        return f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model}"
 
     def get_task_solution_suggestions(self, task_description: str) -> Optional[str]:
         """Получает предложения по решению задачи от LLM"""
@@ -42,14 +46,11 @@ class CloudflareAI:
         """
 
         try:
-            response = requests.post(
-                self.base_url,
-                headers=self.headers,
+            response = self._make_request(
+                "POST",
                 json={"messages": [{"role": "system", "content": prompt}]}
             )
-            response.raise_for_status()
-
-            result = CloudflareAIResult(**response.json())
+            result = CloudflareAIResult(**response)
             if result.success:
                 return result.result.response
             return None
